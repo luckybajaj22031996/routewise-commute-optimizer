@@ -271,29 +271,50 @@
 
     /* Recommendation Card */
     .recommendation {
+      padding: 28px;
+    }
+
+    .rec-dual {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .rec-panel {
       text-align: center;
-      padding: 36px 28px;
+      padding: 20px 12px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(0,0,0,0.15);
+    }
+
+    .rec-panel-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--text-dim);
+      margin-bottom: 8px;
     }
 
     .rec-time {
       font-family: var(--serif);
-      font-size: 3.5rem;
+      font-size: 2.5rem;
       color: var(--accent);
       line-height: 1;
-      margin-bottom: 8px;
+      margin-bottom: 4px;
     }
 
-    .rec-label {
-      font-size: 0.85rem;
+    .rec-sublabel {
+      font-size: 0.78rem;
       color: var(--text-muted);
-      margin-bottom: 24px;
+      margin-bottom: 16px;
     }
 
     .rec-meta {
       display: flex;
       justify-content: center;
-      gap: 32px;
-      padding-top: 20px;
+      gap: 20px;
+      padding-top: 12px;
       border-top: 1px solid var(--border);
     }
 
@@ -302,17 +323,28 @@
     }
 
     .rec-meta-value {
-      font-size: 1.3rem;
+      font-size: 1.1rem;
       font-weight: 700;
       color: var(--text);
     }
 
     .rec-meta-label {
-      font-size: 0.72rem;
+      font-size: 0.65rem;
       color: var(--text-dim);
       text-transform: uppercase;
       letter-spacing: 1px;
       margin-top: 2px;
+    }
+
+    .rec-note {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    @media (max-width: 600px) {
+      .rec-dual { grid-template-columns: 1fr; }
+      .rec-time { font-size: 2rem; }
     }
 
     /* Live Traffic */
@@ -671,7 +703,7 @@
 
     <!-- Recommendation -->
     <div class="card recommendation" id="recCard">
-      <div class="card-label">Best Time to Leave</div>
+      <div class="card-label">Best Times</div>
       <div id="recContent">
         <div class="empty-state">
           <div class="empty-state-icon">🕐</div>
@@ -864,7 +896,6 @@
         document.getElementById('reachHome').value = data.route.reachHome || '20:00';
         document.getElementById('checkNowBtn').disabled = false;
         updateDirectionLabel();
-        fetchLiveTraffic();
       }
     } catch (e) {
       console.log('No saved route yet');
@@ -876,7 +907,6 @@
     state.direction = state.direction === 'forward' ? 'reverse' : 'forward';
     document.getElementById('directionArrow').classList.toggle('flipped');
     updateDirectionLabel();
-    fetchLiveTraffic();
   }
 
   function updateDirectionLabel() {
@@ -956,27 +986,69 @@
   // Render recommendation
   function renderRecommendation(data) {
     const container = document.getElementById('recContent');
-    if (data.recommendation) {
-      const rec = data.recommendation;
-      container.innerHTML = `
-        <div class="rec-time">${rec.bestTime}</div>
-        <div class="rec-label">${rec.direction === 'forward' ? 'Outbound' : 'Return'} — ${rec.dayType || 'Today'}</div>
-        <div class="rec-meta">
-          <div class="rec-meta-item">
-            <div class="rec-meta-value">${rec.avgDuration} min</div>
-            <div class="rec-meta-label">Avg Duration</div>
+    const analysis = data.analysis;
+
+    if (!analysis || (!analysis.forward && !analysis.reverse)) return;
+
+    const reachOffice = state.route?.reachOffice || '10:00';
+    const reachHome = state.route?.reachHome || '20:00';
+
+    function renderPanel(rec, type) {
+      if (!rec) return `
+        <div class="rec-panel">
+          <div class="rec-panel-label">${type === 'forward' ? '🏢 Best Time to Leave' : '🏠 Best Time to Return'}</div>
+          <div class="rec-time" style="font-size:1.5rem; color: var(--text-muted);">—</div>
+          <div class="rec-sublabel">Not enough data yet</div>
+        </div>`;
+
+      const reachBy = type === 'forward' ? reachOffice : reachHome;
+      const reachByLabel = type === 'forward' ? 'Reach office by' : 'Reach home by';
+
+      // Check if best time + avg duration overshoots the reach-by time
+      const bestHour = parseInt(rec.bestTime);
+      const bestAmPm = rec.bestTime.includes('PM') ? 12 : 0;
+      const best24 = (bestHour === 12 ? 0 : bestHour) + bestAmPm;
+      const [reachH, reachM] = reachBy.split(':').map(Number);
+      const arrivalEst = best24 * 60 + rec.avgDuration;
+      const reachByMin = reachH * 60 + reachM;
+      const onTime = arrivalEst <= reachByMin;
+
+      return `
+        <div class="rec-panel">
+          <div class="rec-panel-label">${type === 'forward' ? '🏢 Best Time to Leave' : '🏠 Best Time to Return'}</div>
+          <div class="rec-time">${rec.bestTime}</div>
+          <div class="rec-sublabel">${reachByLabel}: ${formatTime12(reachBy)}</div>
+          <div class="rec-note">${onTime ? '✅ On time' : '⚠️ May exceed reach-by time'}</div>
+          <div class="rec-meta">
+            <div class="rec-meta-item">
+              <div class="rec-meta-value">${rec.avgDuration} min</div>
+              <div class="rec-meta-label">Avg Duration</div>
+            </div>
+            <div class="rec-meta-item">
+              <div class="rec-meta-value">${rec.minDuration} min</div>
+              <div class="rec-meta-label">Best Recorded</div>
+            </div>
+            <div class="rec-meta-item">
+              <div class="rec-meta-value">${rec.savings || '—'} min</div>
+              <div class="rec-meta-label">Saved vs Peak</div>
+            </div>
           </div>
-          <div class="rec-meta-item">
-            <div class="rec-meta-value">${rec.minDuration} min</div>
-            <div class="rec-meta-label">Best Recorded</div>
-          </div>
-          <div class="rec-meta-item">
-            <div class="rec-meta-value">${rec.savings || '—'} min</div>
-            <div class="rec-meta-label">Saved vs Peak</div>
-          </div>
-        </div>
-      `;
+        </div>`;
     }
+
+    container.innerHTML = `
+      <div class="rec-dual">
+        ${renderPanel(analysis.forward, 'forward')}
+        ${renderPanel(analysis.reverse, 'reverse')}
+      </div>
+    `;
+  }
+
+  function formatTime12(time24) {
+    const [h, m] = time24.split(':').map(Number);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h > 12 ? h - 12 : h === 0 ? 12 : h;
+    return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
   }
 
   // Render chart (simple SVG)
@@ -1093,13 +1165,6 @@
     container.innerHTML = `<div class="message message-${type}">${text}</div>`;
     setTimeout(() => { container.innerHTML = ''; }, 5000);
   }
-
-  // Auto-refresh every 5 minutes
-  setInterval(() => {
-    if (state.route) {
-      fetchLiveTraffic();
-    }
-  }, 5 * 60 * 1000);
 
   // Init
   init();

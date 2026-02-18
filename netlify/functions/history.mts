@@ -11,20 +11,38 @@ interface TrafficRecord {
   destination: string;
 }
 
-function analyzePatterns(records: TrafficRecord[]) {
-  if (records.length < 5) return null;
+function analyzePatterns(records: TrafficRecord[], reachOffice: string, reachHome: string) {
+  if (records.length < 3) return null;
+
+  const BUFFER = 2; // 2-hour monitoring window
+
+  const [officeH] = reachOffice.split(":").map(Number);
+  const [homeH] = reachHome.split(":").map(Number);
+
+  // Forward: only consider hours within the morning window
+  const forwardMinHour = officeH - BUFFER;
+  const forwardMaxHour = officeH;
+
+  // Reverse: only consider hours within the evening window
+  const reverseMinHour = homeH - BUFFER;
+  const reverseMaxHour = homeH;
 
   // Group by hour and direction
   const hourBuckets: Record<string, number[]> = {};
 
   records.forEach((r) => {
     const hour = new Date(r.timestamp).getHours();
+
+    // Only include records within relevant windows
+    if (r.direction === "forward" && (hour < forwardMinHour || hour > forwardMaxHour)) return;
+    if (r.direction === "reverse" && (hour < reverseMinHour || hour > reverseMaxHour)) return;
+
     const key = `${r.direction}-${hour}`;
     if (!hourBuckets[key]) hourBuckets[key] = [];
     hourBuckets[key].push(r.duration);
   });
 
-  // Find best hour for forward direction
+  // Find best hour per direction
   let bestForwardHour = -1;
   let bestForwardAvg = Infinity;
   let bestReverseHour = -1;
@@ -45,7 +63,7 @@ function analyzePatterns(records: TrafficRecord[]) {
     }
   });
 
-  // Overall stats
+  // Overall stats per direction
   const forwardRecords = records.filter((r) => r.direction === "forward");
   const reverseRecords = records.filter((r) => r.direction === "reverse");
 
@@ -57,13 +75,6 @@ function analyzePatterns(records: TrafficRecord[]) {
 
   const forwardMin = forwardDurations.length > 0 ? Math.min(...forwardDurations) : 0;
   const reverseMin = reverseDurations.length > 0 ? Math.min(...reverseDurations) : 0;
-
-  const forwardAvgAll = forwardDurations.length > 0
-    ? Math.round(forwardDurations.reduce((a, b) => a + b, 0) / forwardDurations.length)
-    : 0;
-  const reverseAvgAll = reverseDurations.length > 0
-    ? Math.round(reverseDurations.reduce((a, b) => a + b, 0) / reverseDurations.length)
-    : 0;
 
   const formatHour = (h: number) => {
     if (h === -1) return "--:--";
@@ -77,17 +88,19 @@ function analyzePatterns(records: TrafficRecord[]) {
       bestTime: formatHour(bestForwardHour),
       avgDuration: Math.round(bestForwardAvg),
       minDuration: forwardMin,
+      maxDuration: forwardMax,
       savings: forwardMax - Math.round(bestForwardAvg),
       direction: "forward",
-      dayType: "Weekday",
+      dataPoints: forwardRecords.length,
     } : null,
     reverse: bestReverseHour !== -1 ? {
       bestTime: formatHour(bestReverseHour),
       avgDuration: Math.round(bestReverseAvg),
       minDuration: reverseMin,
+      maxDuration: reverseMax,
       savings: reverseMax - Math.round(bestReverseAvg),
       direction: "reverse",
-      dayType: "Weekday",
+      dataPoints: reverseRecords.length,
     } : null,
   };
 }
@@ -105,7 +118,16 @@ export default async (req: Request, context: Context) => {
     // No history
   }
 
-  const analysis = analyzePatterns(history);
+  // Load route config for reach-by times
+  let route: any = null;
+  try {
+    route = await store.get("route", { type: "json" });
+  } catch (e) {}
+
+  const reachOffice = route?.reachOffice || "10:00";
+  const reachHome = route?.reachHome || "20:00";
+
+  const analysis = analyzePatterns(history, reachOffice, reachHome);
 
   // Return the forward recommendation by default
   const recommendation = analysis?.forward || analysis?.reverse || null;
