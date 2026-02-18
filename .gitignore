@@ -1,0 +1,4 @@
+node_modules/
+.netlify/
+routewise-data.json
+.env

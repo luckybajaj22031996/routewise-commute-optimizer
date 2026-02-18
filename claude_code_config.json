@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "routewise": {
+      "command": "node",
+      "args": ["mcp-server.mjs"],
+      "description": "RouteWise Commute Optimizer - check traffic, get departure recommendations, view history"
+    }
+  }
+}

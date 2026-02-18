@@ -1,0 +1,14 @@
+{
+  "name": "routewise-commute-optimizer",
+  "version": "1.0.0",
+  "description": "Smart commute optimizer - monitors traffic patterns and recommends best departure times",
+  "author": "Lucky Bajaj",
+  "license": "MIT",
+  "dependencies": {
+    "@netlify/blobs": "^8.0.0",
+    "@netlify/functions": "^2.8.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0"
+  }
+}

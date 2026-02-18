@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RouteWise — Smart Commute Optimizer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0e17;
+      --bg-card: #111827;
+      --bg-card-hover: #1a2235;
+      --border: #1e293b;
+      --border-accent: #334155;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --accent: #22d3ee;
+      --accent-glow: rgba(34, 211, 238, 0.15);
+      --accent-green: #34d399;
+      --accent-amber: #fbbf24;
+      --accent-red: #f87171;
+      --serif: 'DM Serif Display', serif;
+      --sans: 'DM Sans', sans-serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Ambient background */
+    body::before {
+      content: '';
+      position: fixed;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(ellipse at 30% 20%, rgba(34, 211, 238, 0.04) 0%, transparent 50%),
+                  radial-gradient(ellipse at 70% 80%, rgba(52, 211, 153, 0.03) 0%, transparent 50%);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Header */
+    header {
+      padding: 40px 0 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      font-family: var(--serif);
+      font-size: 1.8rem;
+      color: var(--accent);
+      letter-spacing: -0.5px;
+    }
+
+    .logo span {
+      color: var(--text-dim);
+      font-family: var(--sans);
+      font-size: 0.75rem;
+      font-weight: 400;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      display: block;
+      margin-top: 2px;
+    }
+
+    /* Hero */
+    .hero {
+      padding: 60px 0 40px;
+      text-align: center;
+    }
+
+    .hero h1 {
+      font-family: var(--serif);
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      color: var(--text);
+      line-height: 1.15;
+      margin-bottom: 16px;
+    }
+
+    .hero h1 em {
+      font-style: italic;
+      color: var(--accent);
+    }
+
+    .hero p {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      max-width: 560px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* Status bar */
+    .status-bar {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 32px;
+      flex-wrap: wrap;
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent-green);
+      animation: pulse 2s infinite;
+    }
+
+    .status-dot.amber { background: var(--accent-amber); }
+    .status-dot.red { background: var(--accent-red); }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* Main Grid */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-top: 40px;
+    }
+
+    @media (max-width: 768px) {
+      .main-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      transition: border-color 0.3s;
+    }
+
+    .card:hover { border-color: var(--border-accent); }
+
+    .card-label {
+      font-size: 0.7rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 16px;
+    }
+
+    .card-full {
+      grid-column: 1 / -1;
+    }
+
+    /* Route Setup */
+    .input-group {
+      margin-bottom: 16px;
+    }
+
+    .input-group label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+
+    .input-group input,
+    .input-group select {
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 0.9rem;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+
+    .input-group input:focus,
+    .input-group select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .input-group input::placeholder {
+      color: var(--text-dim);
+    }
+
+    .input-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 10px;
+      font-family: var(--sans);
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      width: 100%;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: var(--bg);
+    }
+
+    .btn-primary:hover {
+      filter: brightness(1.1);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 20px var(--accent-glow);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+      filter: none;
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--border-accent);
+      color: var(--text);
+    }
+
+    /* Recommendation Card */
+    .recommendation {
+      text-align: center;
+      padding: 36px 28px;
+    }
+
+    .rec-time {
+      font-family: var(--serif);
+      font-size: 3.5rem;
+      color: var(--accent);
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .rec-label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+
+    .rec-meta {
+      display: flex;
+      justify-content: center;
+      gap: 32px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+    }
+
+    .rec-meta-item {
+      text-align: center;
+    }
+
+    .rec-meta-value {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .rec-meta-label {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 2px;
+    }
+
+    /* Live Traffic */
+    .traffic-now {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 20px;
+      background: rgba(34, 211, 238, 0.05);
+      border: 1px solid rgba(34, 211, 238, 0.1);
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+
+    .traffic-now-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .traffic-now-unit {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .traffic-now-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    /* History Table */
+    .history-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+    }
+
+    .history-table th {
+      text-align: left;
+      font-size: 0.7rem;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .history-table td {
+      padding: 10px 0;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      border-bottom: 1px solid rgba(30, 41, 59, 0.5);
+    }
+
+    .duration-bar-container {
+      width: 100%;
+      height: 6px;
+      background: var(--bg);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .duration-bar {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.6s ease;
+    }
+
+    .bar-low { background: var(--accent-green); }
+    .bar-med { background: var(--accent-amber); }
+    .bar-high { background: var(--accent-red); }
+
+    /* Alerts Config */
+    .alert-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 0;
+      border-bottom: 1px solid rgba(30, 41, 59, 0.5);
+    }
+
+    .alert-row:last-child { border-bottom: none; }
+
+    .alert-info {
+      flex: 1;
+    }
+
+    .alert-title {
+      font-size: 0.9rem;
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .alert-desc {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+
+    /* Toggle Switch */
+    .toggle {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background: var(--border);
+      border-radius: 24px;
+      transition: 0.3s;
+    }
+
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background: var(--text-muted);
+      border-radius: 50%;
+      transition: 0.3s;
+    }
+
+    .toggle input:checked + .toggle-slider {
+      background: var(--accent);
+    }
+
+    .toggle input:checked + .toggle-slider::before {
+      transform: translateX(20px);
+      background: var(--bg);
+    }
+
+    /* Chart area */
+    .chart-container {
+      position: relative;
+      height: 200px;
+      margin-top: 16px;
+    }
+
+    .chart-svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Loading spinner */
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--bg);
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Messages */
+    .message {
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      margin-bottom: 16px;
+    }
+
+    .message-info {
+      background: rgba(34, 211, 238, 0.08);
+      border: 1px solid rgba(34, 211, 238, 0.15);
+      color: var(--accent);
+    }
+
+    .message-error {
+      background: rgba(248, 113, 113, 0.08);
+      border: 1px solid rgba(248, 113, 113, 0.15);
+      color: var(--accent-red);
+    }
+
+    .message-success {
+      background: rgba(52, 211, 153, 0.08);
+      border: 1px solid rgba(52, 211, 153, 0.15);
+      color: var(--accent-green);
+    }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-dim);
+    }
+
+    .empty-state-icon {
+      font-size: 2.5rem;
+      margin-bottom: 12px;
+      opacity: 0.5;
+    }
+
+    .empty-state p {
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 40px 0;
+      margin-top: 60px;
+      border-top: 1px solid var(--border);
+      color: var(--text-dim);
+      font-size: 0.75rem;
+    }
+
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    /* Tab navigation */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--bg);
+      border-radius: 10px;
+      padding: 4px;
+      margin-bottom: 20px;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text-dim);
+      font-family: var(--sans);
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tab.active {
+      background: var(--bg-card-hover);
+      color: var(--accent);
+    }
+
+    .tab:hover:not(.active) {
+      color: var(--text-muted);
+    }
+
+    /* Direction toggle */
+    .direction-toggle {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .direction-toggle .arrow {
+      color: var(--accent);
+      font-size: 1.2rem;
+      cursor: pointer;
+      transition: transform 0.3s;
+    }
+
+    .direction-toggle .arrow.flipped {
+      transform: rotate(180deg);
+    }
+
+    .direction-label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .direction-label strong {
+      color: var(--text);
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .input-row { grid-template-columns: 1fr; }
+      .rec-meta { gap: 20px; }
+      .rec-time { font-size: 2.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="logo">
+      RouteWise
+      <span>Smart Commute Intelligence</span>
+    </div>
+  </header>
+
+  <section class="hero">
+    <h1>Stop guessing.<br>Start leaving at the <em>right</em> time.</h1>
+    <p>RouteWise monitors traffic patterns on your route and tells you the optimal time to leave — backed by real data, not instinct.</p>
+    <div class="status-bar">
+      <div class="status-pill">
+        <div class="status-dot" id="apiStatus"></div>
+        <span id="apiStatusText">Checking API...</span>
+      </div>
+      <div class="status-pill">
+        <span id="dataPoints">0 data points collected</span>
+      </div>
+      <div class="status-pill">
+        <span id="lastFetch">Last fetch: never</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Route Setup -->
+  <div class="main-grid">
+    <div class="card">
+      <div class="card-label">① Route Setup</div>
+      <div id="setupMessage"></div>
+      <div class="input-group">
+        <label>Origin (e.g. home)</label>
+        <input type="text" id="origin" placeholder="IIT Bombay, Powai, Mumbai" />
+      </div>
+      <div class="input-group">
+        <label>Destination (e.g. office)</label>
+        <input type="text" id="destination" placeholder="Andheri East, Mumbai" />
+      </div>
+      <div class="input-row">
+        <div class="input-group">
+          <label>Monitor from</label>
+          <input type="time" id="timeFrom" value="07:00" />
+        </div>
+        <div class="input-group">
+          <label>Monitor until</label>
+          <input type="time" id="timeTo" value="22:00" />
+        </div>
+      </div>
+      <div class="input-group">
+        <label>Check interval</label>
+        <select id="interval">
+          <option value="15">Every 15 minutes</option>
+          <option value="30" selected>Every 30 minutes</option>
+          <option value="60">Every hour</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" id="saveRoute" onclick="saveRoute()">
+        Save Route & Start Monitoring
+      </button>
+    </div>
+
+    <!-- Recommendation -->
+    <div class="card recommendation" id="recCard">
+      <div class="card-label">Best Time to Leave</div>
+      <div id="recContent">
+        <div class="empty-state">
+          <div class="empty-state-icon">🕐</div>
+          <p>Set up your route and collect data.<br>Recommendations will appear here.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Traffic -->
+    <div class="card">
+      <div class="card-label">② Live Traffic</div>
+      <div class="direction-toggle">
+        <span class="direction-label" id="directionLabel"><strong>Origin</strong> → Destination</span>
+        <span class="arrow" id="directionArrow" onclick="toggleDirection()">⇄</span>
+      </div>
+      <div id="liveTrafficContent">
+        <div class="empty-state">
+          <div class="empty-state-icon">🛣️</div>
+          <p>Save a route to check live traffic conditions.</p>
+        </div>
+      </div>
+      <button class="btn btn-secondary" style="margin-top: 16px;" onclick="fetchLiveTraffic()" id="checkNowBtn" disabled>
+        Check Now
+      </button>
+    </div>
+
+    <!-- Alert Config -->
+    <div class="card">
+      <div class="card-label">③ Alert Preferences</div>
+      <div class="alert-row">
+        <div class="alert-info">
+          <div class="alert-title">Low traffic alert</div>
+          <div class="alert-desc">Notify when travel time drops below average</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="alertLow" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="alert-row">
+        <div class="alert-info">
+          <div class="alert-title">Departure reminder</div>
+          <div class="alert-desc">Alert 15 min before optimal departure window</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="alertDeparture" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="alert-row">
+        <div class="alert-info">
+          <div class="alert-title">Spike warning</div>
+          <div class="alert-desc">Warn when traffic is unusually heavy</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="alertSpike">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="input-group" style="margin-top: 16px;">
+        <label>Reach by time (for smart alerts)</label>
+        <input type="time" id="reachBy" value="10:00" />
+      </div>
+      <button class="btn btn-secondary" onclick="saveAlertPrefs()">Save Preferences</button>
+    </div>
+
+    <!-- Historical Data / Chart -->
+    <div class="card card-full">
+      <div class="card-label">④ Traffic Patterns</div>
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('chart', this)">Chart</button>
+        <button class="tab" onclick="switchTab('table', this)">History</button>
+      </div>
+      <div id="chartView">
+        <div id="chartArea">
+          <div class="empty-state">
+            <div class="empty-state-icon">📊</div>
+            <p>Traffic patterns will appear here once data collection begins.<br>The more data collected, the smarter the recommendations.</p>
+          </div>
+        </div>
+      </div>
+      <div id="tableView" style="display: none;">
+        <div id="historyContent">
+          <div class="empty-state">
+            <div class="empty-state-icon">📋</div>
+            <p>No historical data yet. Data will appear as it's collected.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Built by <a href="https://luckybajaj.com" target="_blank">Lucky Bajaj</a> — Powered by Google Maps API & MCP · RouteWise v1.0
+  </footer>
+</div>
+
+<script>
+  // State
+  let state = {
+    route: null,
+    direction: 'forward', // forward = origin→dest, reverse = dest→origin
+    history: [],
+    apiKeySet: false,
+  };
+
+  const API_BASE = '';
+
+  // Initialize
+  async function init() {
+    await checkApiStatus();
+    await loadRoute();
+    await loadHistory();
+  }
+
+  // API Status
+  async function checkApiStatus() {
+    try {
+      const res = await fetch(`${API_BASE}/api/status`);
+      const data = await res.json();
+      const dot = document.getElementById('apiStatus');
+      const text = document.getElementById('apiStatusText');
+
+      if (data.apiKeyConfigured) {
+        dot.className = 'status-dot';
+        text.textContent = 'API Connected';
+        state.apiKeySet = true;
+      } else {
+        dot.className = 'status-dot amber';
+        text.textContent = 'API Key Missing';
+      }
+
+      document.getElementById('dataPoints').textContent = `${data.dataPoints || 0} data points`;
+      if (data.lastFetch) {
+        document.getElementById('lastFetch').textContent = `Last: ${new Date(data.lastFetch).toLocaleTimeString('en-IN')}`;
+      }
+    } catch (e) {
+      document.getElementById('apiStatus').className = 'status-dot red';
+      document.getElementById('apiStatusText').textContent = 'Server Offline';
+    }
+  }
+
+  // Save Route
+  async function saveRoute() {
+    const origin = document.getElementById('origin').value.trim();
+    const destination = document.getElementById('destination').value.trim();
+    const timeFrom = document.getElementById('timeFrom').value;
+    const timeTo = document.getElementById('timeTo').value;
+    const interval = document.getElementById('interval').value;
+
+    if (!origin || !destination) {
+      showMessage('setupMessage', 'Please enter both origin and destination.', 'error');
+      return;
+    }
+
+    const btn = document.getElementById('saveRoute');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Saving...';
+
+    try {
+      const res = await fetch(`${API_BASE}/api/route`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ origin, destination, timeFrom, timeTo, interval: parseInt(interval) }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        showMessage('setupMessage', `Route saved! Monitoring ${origin} ↔ ${destination}`, 'success');
+        state.route = data.route;
+        document.getElementById('checkNowBtn').disabled = false;
+        updateDirectionLabel();
+        fetchLiveTraffic();
+      } else {
+        showMessage('setupMessage', data.error || 'Failed to save route.', 'error');
+      }
+    } catch (e) {
+      showMessage('setupMessage', 'Server error. Please try again.', 'error');
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = 'Save Route & Start Monitoring';
+  }
+
+  // Load existing route
+  async function loadRoute() {
+    try {
+      const res = await fetch(`${API_BASE}/api/route`);
+      const data = await res.json();
+      if (data.route) {
+        state.route = data.route;
+        document.getElementById('origin').value = data.route.origin;
+        document.getElementById('destination').value = data.route.destination;
+        document.getElementById('timeFrom').value = data.route.timeFrom || '07:00';
+        document.getElementById('timeTo').value = data.route.timeTo || '22:00';
+        document.getElementById('interval').value = data.route.interval || 30;
+        document.getElementById('checkNowBtn').disabled = false;
+        updateDirectionLabel();
+        fetchLiveTraffic();
+      }
+    } catch (e) {
+      console.log('No saved route yet');
+    }
+  }
+
+  // Toggle direction
+  function toggleDirection() {
+    state.direction = state.direction === 'forward' ? 'reverse' : 'forward';
+    document.getElementById('directionArrow').classList.toggle('flipped');
+    updateDirectionLabel();
+    fetchLiveTraffic();
+  }
+
+  function updateDirectionLabel() {
+    if (!state.route) return;
+    const label = document.getElementById('directionLabel');
+    if (state.direction === 'forward') {
+      label.innerHTML = `<strong>${truncate(state.route.origin)}</strong> → ${truncate(state.route.destination)}`;
+    } else {
+      label.innerHTML = `<strong>${truncate(state.route.destination)}</strong> → ${truncate(state.route.origin)}`;
+    }
+  }
+
+  function truncate(str, len = 25) {
+    return str.length > len ? str.substring(0, len) + '…' : str;
+  }
+
+  // Fetch live traffic
+  async function fetchLiveTraffic() {
+    if (!state.route) return;
+    const container = document.getElementById('liveTrafficContent');
+    container.innerHTML = '<div style="text-align:center; padding: 20px;"><span class="spinner" style="border-color: var(--accent); border-top-color: transparent; width:24px; height:24px;"></span></div>';
+
+    try {
+      const res = await fetch(`${API_BASE}/api/traffic?direction=${state.direction}`);
+      const data = await res.json();
+
+      if (data.error) {
+        container.innerHTML = `<div class="message message-error">${data.error}</div>`;
+        return;
+      }
+
+      const level = data.duration < 25 ? 'low' : data.duration < 40 ? 'med' : 'high';
+      const levelColor = level === 'low' ? 'var(--accent-green)' : level === 'med' ? 'var(--accent-amber)' : 'var(--accent-red)';
+      const levelText = level === 'low' ? 'Light traffic' : level === 'med' ? 'Moderate traffic' : 'Heavy traffic';
+
+      container.innerHTML = `
+        <div class="traffic-now">
+          <div>
+            <div class="traffic-now-value" style="color: ${levelColor}">${data.duration}</div>
+            <div class="traffic-now-unit">minutes</div>
+          </div>
+          <div>
+            <div class="traffic-now-desc">${levelText} right now</div>
+            <div class="traffic-now-desc" style="margin-top:4px; font-size:0.75rem;">via ${data.summary || 'best route'}</div>
+          </div>
+        </div>
+        <div style="font-size:0.78rem; color: var(--text-dim);">
+          Distance: ${data.distance || '—'} · Checked: ${new Date().toLocaleTimeString('en-IN')}
+        </div>
+      `;
+
+      // Refresh status
+      checkApiStatus();
+      loadHistory();
+    } catch (e) {
+      container.innerHTML = `<div class="message message-error">Could not fetch traffic data. Check server.</div>`;
+    }
+  }
+
+  // Load history
+  async function loadHistory() {
+    try {
+      const res = await fetch(`${API_BASE}/api/history`);
+      const data = await res.json();
+
+      if (!data.records || data.records.length === 0) return;
+
+      state.history = data.records;
+      renderChart(data.records);
+      renderTable(data.records);
+      renderRecommendation(data);
+    } catch (e) {
+      console.log('No history available');
+    }
+  }
+
+  // Render recommendation
+  function renderRecommendation(data) {
+    const container = document.getElementById('recContent');
+    if (data.recommendation) {
+      const rec = data.recommendation;
+      container.innerHTML = `
+        <div class="rec-time">${rec.bestTime}</div>
+        <div class="rec-label">${rec.direction === 'forward' ? 'Outbound' : 'Return'} — ${rec.dayType || 'Today'}</div>
+        <div class="rec-meta">
+          <div class="rec-meta-item">
+            <div class="rec-meta-value">${rec.avgDuration} min</div>
+            <div class="rec-meta-label">Avg Duration</div>
+          </div>
+          <div class="rec-meta-item">
+            <div class="rec-meta-value">${rec.minDuration} min</div>
+            <div class="rec-meta-label">Best Recorded</div>
+          </div>
+          <div class="rec-meta-item">
+            <div class="rec-meta-value">${rec.savings || '—'} min</div>
+            <div class="rec-meta-label">Saved vs Peak</div>
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  // Render chart (simple SVG)
+  function renderChart(records) {
+    const container = document.getElementById('chartArea');
+    if (records.length < 2) return;
+
+    const recent = records.slice(-48); // last 48 entries
+    const durations = recent.map(r => r.duration);
+    const maxD = Math.max(...durations);
+    const minD = Math.min(...durations);
+    const range = maxD - minD || 1;
+
+    const w = 100; // percentage
+    const h = 180;
+    const padding = 20;
+
+    const points = recent.map((r, i) => {
+      const x = (i / (recent.length - 1)) * 100;
+      const y = padding + ((maxD - r.duration) / range) * (h - 2 * padding);
+      return { x, y, ...r };
+    });
+
+    const pathD = points.map((p, i) =>
+      `${i === 0 ? 'M' : 'L'} ${p.x}% ${p.y}`
+    ).join(' ');
+
+    const areaD = pathD + ` L ${points[points.length - 1].x}% ${h} L ${points[0].x}% ${h} Z`;
+
+    container.innerHTML = `
+      <div style="position: relative; height: ${h}px;">
+        <svg viewBox="0 0 100 ${h}" preserveAspectRatio="none" style="width:100%; height:100%;">
+          <defs>
+            <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.2"/>
+              <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <path d="${areaD}" fill="url(#areaGrad)" />
+          <path d="${pathD}" fill="none" stroke="var(--accent)" stroke-width="0.4" vector-effect="non-scaling-stroke" stroke-width="2"/>
+        </svg>
+        <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:var(--text-dim); margin-top:4px;">
+          <span>${new Date(recent[0].timestamp).toLocaleDateString('en-IN', { day:'numeric', month:'short' })}</span>
+          <span>${maxD} min (peak)</span>
+          <span>${minD} min (best)</span>
+          <span>${new Date(recent[recent.length-1].timestamp).toLocaleDateString('en-IN', { day:'numeric', month:'short' })}</span>
+        </div>
+      </div>
+    `;
+  }
+
+  // Render table
+  function renderTable(records) {
+    const container = document.getElementById('historyContent');
+    const recent = records.slice(-20).reverse();
+    const maxD = Math.max(...records.map(r => r.duration));
+
+    let html = `<table class="history-table">
+      <thead><tr><th>Time</th><th>Direction</th><th>Duration</th><th style="width:30%">Level</th></tr></thead>
+      <tbody>`;
+
+    recent.forEach(r => {
+      const pct = (r.duration / maxD) * 100;
+      const level = r.duration < 25 ? 'low' : r.duration < 40 ? 'med' : 'high';
+      const dir = r.direction === 'forward' ? '→' : '←';
+      const time = new Date(r.timestamp).toLocaleString('en-IN', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+
+      html += `<tr>
+        <td>${time}</td>
+        <td>${dir}</td>
+        <td>${r.duration} min</td>
+        <td><div class="duration-bar-container"><div class="duration-bar bar-${level}" style="width:${pct}%"></div></div></td>
+      </tr>`;
+    });
+
+    html += '</tbody></table>';
+    container.innerHTML = html;
+  }
+
+  // Tab switching
+  function switchTab(tab, btn) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('chartView').style.display = tab === 'chart' ? 'block' : 'none';
+    document.getElementById('tableView').style.display = tab === 'table' ? 'block' : 'none';
+  }
+
+  // Save alert preferences
+  async function saveAlertPrefs() {
+    const prefs = {
+      lowTraffic: document.getElementById('alertLow').checked,
+      departure: document.getElementById('alertDeparture').checked,
+      spike: document.getElementById('alertSpike').checked,
+      reachBy: document.getElementById('reachBy').value,
+    };
+
+    try {
+      const res = await fetch(`${API_BASE}/api/alerts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(prefs),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showMessage('setupMessage', 'Alert preferences saved!', 'success');
+      }
+    } catch (e) {
+      console.log('Alert save failed');
+    }
+  }
+
+  // Helper: show message
+  function showMessage(containerId, text, type = 'info') {
+    const container = document.getElementById(containerId);
+    container.innerHTML = `<div class="message message-${type}">${text}</div>`;
+    setTimeout(() => { container.innerHTML = ''; }, 5000);
+  }
+
+  // Auto-refresh every 5 minutes
+  setInterval(() => {
+    if (state.route) {
+      fetchLiveTraffic();
+    }
+  }, 5 * 60 * 1000);
+
+  // Init
+  init();
+</script>
+
+</body>
+</html>
