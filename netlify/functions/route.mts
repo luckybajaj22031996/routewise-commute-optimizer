@@ -20,7 +20,7 @@ export default async (req: Request, context: Context) => {
   if (req.method === "POST") {
     try {
       const body = await req.json() as any;
-      const { origin, destination, timeFrom, timeTo, interval } = body;
+      const { origin, destination, reachOffice, reachHome } = body;
 
       if (!origin || !destination) {
         return new Response(JSON.stringify({ success: false, error: "Origin and destination are required" }), {
@@ -32,9 +32,8 @@ export default async (req: Request, context: Context) => {
       const route = {
         origin,
         destination,
-        timeFrom: timeFrom || "07:00",
-        timeTo: timeTo || "22:00",
-        interval: interval || 30,
+        reachOffice: reachOffice || "10:00",
+        reachHome: reachHome || "20:00",
         createdAt: new Date().toISOString(),
       };
 

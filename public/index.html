@@ -653,21 +653,16 @@
       </div>
       <div class="input-row">
         <div class="input-group">
-          <label>Monitor from</label>
-          <input type="time" id="timeFrom" value="07:00" />
+          <label>🏢 Reach office by</label>
+          <input type="time" id="reachOffice" value="10:00" />
         </div>
         <div class="input-group">
-          <label>Monitor until</label>
-          <input type="time" id="timeTo" value="22:00" />
+          <label>🏠 Reach home by</label>
+          <input type="time" id="reachHome" value="20:00" />
         </div>
       </div>
-      <div class="input-group">
-        <label>Check interval</label>
-        <select id="interval">
-          <option value="15">Every 15 minutes</option>
-          <option value="30" selected>Every 30 minutes</option>
-          <option value="60">Every hour</option>
-        </select>
+      <div style="font-size: 0.75rem; color: var(--text-dim); margin-bottom: 16px;">
+        Traffic will be monitored 2 hours before each reach-by time — only during relevant windows.
       </div>
       <button class="btn btn-primary" id="saveRoute" onclick="saveRoute()">
         Save Route & Start Monitoring
@@ -735,10 +730,6 @@
           <input type="checkbox" id="alertSpike">
           <span class="toggle-slider"></span>
         </label>
-      </div>
-      <div class="input-group" style="margin-top: 16px;">
-        <label>Reach by time (for smart alerts)</label>
-        <input type="time" id="reachBy" value="10:00" />
       </div>
       <button class="btn btn-secondary" onclick="saveAlertPrefs()">Save Preferences</button>
     </div>
@@ -823,9 +814,8 @@
   async function saveRoute() {
     const origin = document.getElementById('origin').value.trim();
     const destination = document.getElementById('destination').value.trim();
-    const timeFrom = document.getElementById('timeFrom').value;
-    const timeTo = document.getElementById('timeTo').value;
-    const interval = document.getElementById('interval').value;
+    const reachOffice = document.getElementById('reachOffice').value;
+    const reachHome = document.getElementById('reachHome').value;
 
     if (!origin || !destination) {
       showMessage('setupMessage', 'Please enter both origin and destination.', 'error');
@@ -840,7 +830,7 @@
       const res = await fetch(`${API_BASE}/api/route`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ origin, destination, timeFrom, timeTo, interval: parseInt(interval) }),
+        body: JSON.stringify({ origin, destination, reachOffice, reachHome }),
       });
 
       const data = await res.json();
@@ -870,9 +860,8 @@
         state.route = data.route;
         document.getElementById('origin').value = data.route.origin;
         document.getElementById('destination').value = data.route.destination;
-        document.getElementById('timeFrom').value = data.route.timeFrom || '07:00';
-        document.getElementById('timeTo').value = data.route.timeTo || '22:00';
-        document.getElementById('interval').value = data.route.interval || 30;
+        document.getElementById('reachOffice').value = data.route.reachOffice || '10:00';
+        document.getElementById('reachHome').value = data.route.reachHome || '20:00';
         document.getElementById('checkNowBtn').disabled = false;
         updateDirectionLabel();
         fetchLiveTraffic();
@@ -1081,7 +1070,6 @@
       lowTraffic: document.getElementById('alertLow').checked,
       departure: document.getElementById('alertDeparture').checked,
       spike: document.getElementById('alertSpike').checked,
-      reachBy: document.getElementById('reachBy').value,
     };
 
     try {

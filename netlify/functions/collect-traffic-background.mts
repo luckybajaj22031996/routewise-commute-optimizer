@@ -65,26 +65,38 @@ export default async (req: Request) => {
     return;
   }
 
-  // Check if current time is within monitoring window
+  // Check if current IST time falls within a smart monitoring window
+  // Morning window: 2 hours before reachOffice → fetch FORWARD (home → office)
+  // Evening window: 2 hours before reachHome → fetch REVERSE (office → home)
   const now = new Date();
   const istOffset = 5.5 * 60; // IST = UTC+5:30
   const utcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
-  const istMinutes = utcMinutes + istOffset;
-  const istHours = Math.floor(istMinutes / 60) % 24;
+  const istMinutes = (utcMinutes + istOffset) % (24 * 60);
+  const istHours = Math.floor(istMinutes / 60);
   const istMins = istMinutes % 60;
-
-  const [fromH, fromM] = (route.timeFrom || "07:00").split(":").map(Number);
-  const [toH, toM] = (route.timeTo || "22:00").split(":").map(Number);
   const currentMinutes = istHours * 60 + istMins;
-  const fromMinutes = fromH * 60 + fromM;
-  const toMinutes = toH * 60 + toM;
 
-  if (currentMinutes < fromMinutes || currentMinutes > toMinutes) {
-    console.log(`[Scheduled] Outside monitoring window (${route.timeFrom}-${route.timeTo} IST). Current: ${istHours}:${istMins}`);
+  const BUFFER = 120; // 2 hours before reach-by time
+
+  const [officeH, officeM] = (route.reachOffice || "10:00").split(":").map(Number);
+  const [homeH, homeM] = (route.reachHome || "20:00").split(":").map(Number);
+  const officeMinutes = officeH * 60 + officeM;
+  const homeMinutes = homeH * 60 + homeM;
+
+  const morningStart = officeMinutes - BUFFER;
+  const morningEnd = officeMinutes;
+  const eveningStart = homeMinutes - BUFFER;
+  const eveningEnd = homeMinutes;
+
+  const inMorningWindow = currentMinutes >= morningStart && currentMinutes <= morningEnd;
+  const inEveningWindow = currentMinutes >= eveningStart && currentMinutes <= eveningEnd;
+
+  if (!inMorningWindow && !inEveningWindow) {
+    console.log(`[Scheduled] Outside both windows. Morning: ${officeH - 2}:00-${route.reachOffice}, Evening: ${homeH - 2}:00-${route.reachHome} IST. Current: ${istHours}:${String(istMins).padStart(2, '0')}`);
     return;
   }
 
-  // Fetch both directions
+  // Fetch only the relevant direction(s)
   let history: TrafficRecord[] = [];
   try {
     const existing = await store.get("history", { type: "json" }) as TrafficRecord[] | null;
@@ -95,38 +107,42 @@ export default async (req: Request) => {
     // Fresh start
   }
 
-  // Forward: origin → destination
-  try {
-    const fwd = await fetchTraffic(route.origin, route.destination, apiKey);
-    history.push({
-      timestamp: now.toISOString(),
-      direction: "forward",
-      duration: fwd.duration,
-      distance: fwd.distance,
-      summary: fwd.summary,
-      origin: route.origin,
-      destination: route.destination,
-    });
-    console.log(`[Scheduled] Forward: ${fwd.duration} min`);
-  } catch (e: any) {
-    console.error(`[Scheduled] Forward fetch failed: ${e.message}`);
+  // Morning window → Forward only (home → office)
+  if (inMorningWindow) {
+    try {
+      const fwd = await fetchTraffic(route.origin, route.destination, apiKey);
+      history.push({
+        timestamp: now.toISOString(),
+        direction: "forward",
+        duration: fwd.duration,
+        distance: fwd.distance,
+        summary: fwd.summary,
+        origin: route.origin,
+        destination: route.destination,
+      });
+      console.log(`[Scheduled] Morning window → Forward: ${fwd.duration} min`);
+    } catch (e: any) {
+      console.error(`[Scheduled] Forward fetch failed: ${e.message}`);
+    }
   }
 
-  // Reverse: destination → origin
-  try {
-    const rev = await fetchTraffic(route.destination, route.origin, apiKey);
-    history.push({
-      timestamp: now.toISOString(),
-      direction: "reverse",
-      duration: rev.duration,
-      distance: rev.distance,
-      summary: rev.summary,
-      origin: route.destination,
-      destination: route.origin,
-    });
-    console.log(`[Scheduled] Reverse: ${rev.duration} min`);
-  } catch (e: any) {
-    console.error(`[Scheduled] Reverse fetch failed: ${e.message}`);
+  // Evening window → Reverse only (office → home)
+  if (inEveningWindow) {
+    try {
+      const rev = await fetchTraffic(route.destination, route.origin, apiKey);
+      history.push({
+        timestamp: now.toISOString(),
+        direction: "reverse",
+        duration: rev.duration,
+        distance: rev.distance,
+        summary: rev.summary,
+        origin: route.destination,
+        destination: route.origin,
+      });
+      console.log(`[Scheduled] Evening window → Reverse: ${rev.duration} min`);
+    } catch (e: any) {
+      console.error(`[Scheduled] Reverse fetch failed: ${e.message}`);
+    }
   }
 
   // Keep last 2000 records
