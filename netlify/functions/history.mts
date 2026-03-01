@@ -31,7 +31,14 @@ function analyzePatterns(records: TrafficRecord[], reachOffice: string, reachHom
   const hourBuckets: Record<string, number[]> = {};
 
   records.forEach((r) => {
-    const hour = new Date(r.timestamp).getHours();
+    // Convert UTC timestamp to IST (UTC+5:30) before extracting hour,
+    // since reachOffice/reachHome are configured in IST and the background
+    // collector also uses IST for its monitoring windows.
+    const date = new Date(r.timestamp);
+    const istOffset = 5.5 * 60; // IST = UTC+5:30 in minutes
+    const utcMinutes = date.getUTCHours() * 60 + date.getUTCMinutes();
+    const istMinutes = (utcMinutes + istOffset) % (24 * 60);
+    const hour = Math.floor(istMinutes / 60);
 
     // Only include records within relevant windows
     if (r.direction === "forward" && (hour < forwardMinHour || hour > forwardMaxHour)) return;
