@@ -83,6 +83,12 @@ function analyzeHistory(history) {
 
   const hourBuckets = {};
   history.forEach((r) => {
+    // Skip weekends (Saturday=6, Sunday=0) in IST
+    const date = new Date(r.timestamp);
+    const istDate = new Date(date.getTime() + 5.5 * 60 * 60 * 1000);
+    const istDay = istDate.getUTCDay();
+    if (istDay === 0 || istDay === 6) return;
+
     const hour = new Date(r.timestamp).getHours();
     const key = `${r.direction}-${hour}`;
     if (!hourBuckets[key]) hourBuckets[key] = [];
