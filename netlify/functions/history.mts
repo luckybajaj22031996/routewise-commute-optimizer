@@ -40,6 +40,11 @@ function analyzePatterns(records: TrafficRecord[], reachOffice: string, reachHom
     const istMinutes = (utcMinutes + istOffset) % (24 * 60);
     const hour = Math.floor(istMinutes / 60);
 
+    // Skip weekends (Saturday=6, Sunday=0) in IST
+    const istDate = new Date(date.getTime() + istOffset * 60 * 1000);
+    const istDay = istDate.getUTCDay();
+    if (istDay === 0 || istDay === 6) return;
+
     // Only include records within relevant windows
     if (r.direction === "forward" && (hour < forwardMinHour || hour > forwardMaxHour)) return;
     if (r.direction === "reverse" && (hour < reverseMinHour || hour > reverseMaxHour)) return;
